@@ -16,13 +16,9 @@ import com.kyrlach.ornament.OPTION
 object TestParser {
   
   def main(args: Array[String]): Unit = {
-    
-    
     val factory = DocumentBuilderFactory.newInstance();
     val builder = factory.newDocumentBuilder()
     implicit val doc = builder.parse(new File("test.html"))
-    val xPathfactory = XPathFactory.newInstance()
-    val xpath = xPathfactory.newXPath()
     
     for(test1 <- new Extractor("#ftest1", elms => elms.headOption.map{ case i: INPUT => i.value})(doc);
         test2 <- new Extractor("#ftest2", elms => elms.headOption.map{ case i: INPUT => i.value})(doc);

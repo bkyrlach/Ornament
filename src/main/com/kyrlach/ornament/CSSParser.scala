@@ -17,9 +17,13 @@ object CSSParser extends RegexParsers {
   val xPathfactory = XPathFactory.newInstance()
   val xpath = xPathfactory.newXPath()
   
+  def firstChild: Parser[String] = ":first-child" ^^ ( ignore => "[1]" )
+  
+  def limiters = firstChild
+  
   def attribute: Parser[String] = "[" ~> """([a-zA-Z]+)""".r ~ "=" ~ """([a-zA-Z]+)""".r <~ "]" ^^ ( nameValue => "@" + nameValue._1._1 + "='" + nameValue._2 + "'")
   def attributes: Parser[String] = rep(attribute) ^^ { attrs => if(attrs.isEmpty) "" else "[" + attrs.foldLeft("")((attrString, attr) => attrString + attr + " and ").dropRight(5) + "]" }
-  def element: Parser[ElementSelector] = """([a-zA-Z]+)""".r ~ opt(attributes) ^^ ( namePlusAttrs =>  ElementSelector(namePlusAttrs._1 + namePlusAttrs._2.getOrElse(""))) 
+  def element: Parser[ElementSelector] = ("*" | """([a-zA-Z]+)""".r) ~ opt(attributes) ~ opt(limiters) ^^ ( result =>  ElementSelector(result._1._1 + result._1._2.getOrElse("") + result._2.getOrElse("") )) 
 
   def byId: Parser[ElementById] = "#" ~> """([^ ]+)""".r ^^ { id => ElementById("*[@id='" + id + "']") }
   
@@ -37,7 +41,7 @@ object CSSParser extends RegexParsers {
     case p: Path => Path("//" + p.xpath)
   }}
   
-  def getSelector(s: String): Document => List[HTMLElement] = {
+  def getSelector(s: String): Document => List[XMLNode] = {
     println("Selector: " + s)
     //println(parseAll(selector, s))
     val selectors = parseAll(selector, s).get
