@@ -1,14 +1,69 @@
+
 <html>
-	<head>
-		<title>Hi there!</title>
-	</head>
-	<body>
-		<h1>Welcome!</h1>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<script language="javascript" charset="utf-8" src="cljs/enfocus.js"></script>
+<link type="text/css" rel="stylesheet" media="all" href="css/test.css" />
+
+
+<title>Insert title here</title>
+</head>
+<body>
+	<div id="content">
+		<div class="heading" foo="true">this should change</div>
 		<table>
 			<tr>
-				<td>Header cell for c1</td>
+				<td>
+					<p>
+						The tests will show <span class="success">success</span> or <span class="fail">fail</span>
+					</p></td>
+				<td>
+					<p>The tests are hard to show in pass or fail terms</p></td>
+			</tr>
+			<tr>
+				<td>
+					<div id="test-content"></div></td>
+				<td>
+					<div id="test-content2"></div>
+					<div id="test-content3"></div>
+					<div id="test-content4">testing setting style</div>
+					<div id="test-content5">testing removing style</div>
+					<div id="test-content6">testing fading</div>
+					<button id="test-remove-listeners">remove the :mouseout and :mouseover</button>
+					<div id="test-content6_5"><h3>test fading</h3>with :mouseenter and :mouseleave</div>
+					<button id="test-unlisten">unlisten :mouseenter and :mouseleave</button></td>
 			</tr>
 		</table>
-		<div id="test-content4">Some content</div>
-	</body>	
+		<button id="click">click to resize</button>
+		<div id="sz-tst">this is testing resize</div>
+		<button id="delay-click">click to resize with delay</button>
+		<div id="dly-tst">this is testing delay</div>
+		<button id="mclick">click to move</button>
+		<div id="mv-holder">
+			<div id="mv-tst"> </div>
+		</div>
+	    <div>
+			<form id="from-form">
+				<input id="ftest1" name="test1" value="Testing1"/><br/>
+				<input id="ftest2" name="test2" value="Testing2"/><br/>
+				one<input id="cb1" name="test3" type="checkbox" value="one"/>
+				two<input id="cb2" name="test3" type="checkbox" value="two"/>
+				three<input id="cb3" name="test3" type="checkbox" value="thee"/><br/>
+				<select name="test4" multiple="multiple">
+					<option value="ten">ten</option>
+					<option value="twenty">twenty</option>
+					<option value="thirty">thirty</option>
+					<option value="forty">forty</option>
+				</select>
+			</form>
+			<button id="test-from" >click me</button>
+			<div id="test-from-div"> </div>
+	    </div>
+	    <div>
+			<div id="ftext-test">This text should show up below the button when you click it.</div>
+			<button id="test-get-text" >click me</button>
+			<div id="ftext-test-result"> </div>
+	    </div>
+	</div>
+</body>
 </html>
