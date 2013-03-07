@@ -5,30 +5,11 @@ import javax.xml.xpath.XPathFactory
 import java.io.File
 import javax.xml.xpath.XPathConstants
 import org.w3c.dom.NodeList
-import com.kyrlach.ornament.CSSParser
-import com.kyrlach.ornament.Transformation
-import com.kyrlach.ornament.HTMLElement
-import com.kyrlach.ornament.A
-import com.kyrlach.ornament.Extractor
-import com.kyrlach.ornament.INPUT
-import com.kyrlach.ornament.OPTION
 
 object TestParser {
   
   def main(args: Array[String]): Unit = {
-    val factory = DocumentBuilderFactory.newInstance();
-    val builder = factory.newDocumentBuilder()
-    implicit val doc = builder.parse(new File("test.html"))
     
-    for(test1 <- new Extractor("#ftest1", elms => elms.headOption.map{ case i: INPUT => i.value})(doc);
-        test2 <- new Extractor("#ftest2", elms => elms.headOption.map{ case i: INPUT => i.value})(doc);
-        test3 <- new Extractor("#from-form > input[type=checkbox]", elms => elms.headOption.map{ case i: INPUT => i.value})(doc);
-        test4 <- new Extractor("#from-form option", elms => elms.headOption.map{ case o: OPTION => o.value})(doc)) {
-      println(test1)
-      println(test2)
-      println(test3)
-      println(test4)
-    }
   }
 //(defn test-from []
 //  (let [form-vals (em/from js/document

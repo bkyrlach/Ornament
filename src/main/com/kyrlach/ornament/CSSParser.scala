@@ -5,6 +5,7 @@ import org.w3c.dom.NodeList
 import org.w3c.dom.Document
 import javax.xml.xpath.XPathFactory
 import javax.xml.xpath.XPathConstants
+import org.w3c.dom.Node
 
 abstract class Selector(val xpath: String)
 case class ElementSelector(override val xpath: String) extends Selector(xpath)
@@ -12,14 +13,12 @@ case class ElementById(override val xpath: String) extends Selector(xpath)
 case class Path(override val xpath: String) extends Selector(xpath)
 
 object CSSParser extends RegexParsers {
-  override def skipWhitespace = false
-  
-  val xPathfactory = XPathFactory.newInstance()
-  val xpath = xPathfactory.newXPath()
+  override def skipWhitespace = false  
   
   def firstChild: Parser[String] = ":first-child" ^^ ( ignore => "[1]" )
+  def lastChild: Parser[String] = ":last-child" ^^ ( ignore => "[last()]" )
   
-  def limiters = firstChild
+  def limiters = firstChild | lastChild
   
   def attribute: Parser[String] = "[" ~> """([a-zA-Z]+)""".r ~ "=" ~ """([a-zA-Z]+)""".r <~ "]" ^^ ( nameValue => "@" + nameValue._1._1 + "='" + nameValue._2 + "'")
   def attributes: Parser[String] = rep(attribute) ^^ { attrs => if(attrs.isEmpty) "" else "[" + attrs.foldLeft("")((attrString, attr) => attrString + attr + " and ").dropRight(5) + "]" }
@@ -41,15 +40,18 @@ object CSSParser extends RegexParsers {
     case p: Path => Path("//" + p.xpath)
   }}
   
-  def getSelector(s: String): Document => List[XMLNode] = {
+  def getSelector(s: String): Node => List[Node] = {
+    import Ornament.nodeList2ListNode
+    
     println("Selector: " + s)
     //println(parseAll(selector, s))
     val selectors = parseAll(selector, s).get
-    doc => (selectors.flatMap{ selector =>
+    rootElement => (selectors.flatMap{ selector =>
       println("XPath: " + selector.xpath)
+      val xpath = XPathFactory.newInstance().newXPath()
       val expr = xpath.compile(selector.xpath)
-      val nodes = expr.evaluate(doc, XPathConstants.NODESET).asInstanceOf[NodeList]
-      HTMLElement(nodes)
+      
+      expr.evaluate(rootElement, XPathConstants.NODESET).asInstanceOf[NodeList]      
     })
   }
 }
