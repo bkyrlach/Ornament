@@ -38,7 +38,7 @@ abstract class XMLNode(val n: Node) {
   
   private def nodeStringBuilder(n: Node): String = n match {
     case n: Node if n.getNodeType == Node.TEXT_NODE => n.getNodeValue
-    case n: Node if n.getNodeType == Node.DOCUMENT_NODE => "<xml>" + (if(n.hasChildNodes) ">" + HTMLElement.mapNodes(n.getChildNodes)(nodeStringBuilder).reduceLeft(_ + _) + "</xml>" else "/>")
+    case n: Node if n.getNodeType == Node.DOCUMENT_NODE => HTMLElement.mapNodes(n.getChildNodes)(nodeStringBuilder).foldLeft("")(_ + _)
     case e: Element => "<" + e.getNodeName + attrStrBuilder(e.getAttributes) + (if(e.hasChildNodes) ">" + HTMLElement.mapNodes(e.getChildNodes)(nodeStringBuilder).reduceLeft(_ + _) + "</" + e.getNodeName + ">" else "/>")     
   }
   
