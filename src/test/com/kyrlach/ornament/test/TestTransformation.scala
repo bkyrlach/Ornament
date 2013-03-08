@@ -1,59 +1,26 @@
 package com.kyrlach.ornament.test
 
-import javax.xml.parsers.DocumentBuilderFactory
 import java.io.File
-import com.kyrlach.ornament.Ornament._
-import org.w3c.dom.Node
-import org.w3c.dom.Element
+import java.io.FileInputStream
+import com.codecommit.antixml.XML
 import com.kyrlach.ornament.CSSParser
-import com.kyrlach.ornament.Ornament
+import com.codecommit.antixml.Elem
+import com.codecommit.antixml.Text
 
 object TestTransformation {
-  import CSSParser.nodeList2ListNode
-  
-  def nodeString(n: Node): String = {
-    n match {
-      case n: Node if n.getNodeType == Node.TEXT_NODE => n.getNodeValue
-      case e: Element => "<" + n.getNodeName + (if(n.hasChildNodes) ">" + n.getChildNodes.map(nodeString).foldLeft("")(_ + _)  + "</" + n.getNodeName + ">" else "/>")
-      case n: Node => n.getChildNodes.map(nodeString).foldLeft("")(_ + _)
-    }
-  }
   
   def main(args: Array[String]): Unit = {
+    val doc = XML.fromInputStream(new FileInputStream(new File("template-test.html")))
     
-    val factory = DocumentBuilderFactory.newInstance();
-    val builder = factory.newDocumentBuilder()
-    val doc = builder.parse(new File("template-test.html"))
+    val elems = CSSParser.getSelector("#heading1")(doc)
     
-    println(CSSParser.getSelector("tbody")(doc))
-    println(CSSParser.getSelector("tbody > *:first-child")(doc))
-    
-    val snippet2 = Snippet(doc, "tbody > *:first-child", nf => {(fruit: String, quantity: Int)  =>
-      At(nf()) (
-        List[(String, List[Node] => Unit)](
-          ("tr > *:first-child", Content(fruit)),
-          ("tr > *:last-child" , Content(quantity.toString))
-        )
-      )
-    })
-    
-    val fruitData = Map("a" -> 1, "b" -> 2, "c" -> 3)
-
-    def silly(d: Map[String, Int]): List[Node] => Unit = {
-      val mapping = fruitData.flatMap(fruit => snippet2(fruit._1, fruit._2)).toList
-      println(mapping.map(nodeString))
-      Content(mapping)
+    val update = elems.head match {
+      case e: Elem => e.addChild(Text("abc"))
     }
-    
-    //content is defined for a Node, String, List<Node>
-    val document = At(doc)(
-      List[(String, List[Node] => Unit)](
-        ("tbody", silly(fruitData))
-      )
-    )
-    
-    println(nodeString(document))
 
+    val update2 = elems.updated(0, update)
+    println(update2)
+    //val doc2 = update2.unselect
     //(em/defsnippet snippet2 "templates/template1.html" ["tbody > *:first-child"] 
 //               [fruit quantity] 
 //               ["tr > *:first-child"] (em/content fruit)
