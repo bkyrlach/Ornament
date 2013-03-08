@@ -2,56 +2,51 @@ package com.kyrlach.ornament
 
 import scala.util.parsing.combinator.RegexParsers
 import org.w3c.dom.NodeList
-import org.w3c.dom.Document
-import javax.xml.xpath.XPathFactory
-import javax.xml.xpath.XPathConstants
 import org.w3c.dom.Node
-
-abstract class Selector(val xpath: String)
-case class ElementSelector(override val xpath: String) extends Selector(xpath)
-case class ElementById(override val xpath: String) extends Selector(xpath)
-case class Path(override val xpath: String) extends Selector(xpath)
+import org.w3c.dom.Element
 
 object CSSParser extends RegexParsers {
-  override def skipWhitespace = false  
-  
-  def firstChild: Parser[String] = ":first-child" ^^ ( ignore => "[1]" )
-  def lastChild: Parser[String] = ":last-child" ^^ ( ignore => "[last()]" )
-  
-  def limiters = firstChild | lastChild
-  
-  def attribute: Parser[String] = "[" ~> """([a-zA-Z]+)""".r ~ "=" ~ """([a-zA-Z]+)""".r <~ "]" ^^ ( nameValue => "@" + nameValue._1._1 + "='" + nameValue._2 + "'")
-  def attributes: Parser[String] = rep(attribute) ^^ { attrs => if(attrs.isEmpty) "" else "[" + attrs.foldLeft("")((attrString, attr) => attrString + attr + " and ").dropRight(5) + "]" }
-  def element: Parser[ElementSelector] = ("*" | """([a-zA-Z]+)""".r) ~ opt(attributes) ~ opt(limiters) ^^ ( result =>  ElementSelector(result._1._1 + result._1._2.getOrElse("") + result._2.getOrElse("") )) 
-
-  def byId: Parser[ElementById] = "#" ~> """([^ ]+)""".r ^^ { id => ElementById("*[@id='" + id + "']") }
-  
-  def nonRepeat: Parser[Selector] = byId | element
-  
-  def selectorPart: Parser[Selector] = descendants | directDescendants | nonRepeat
-  
-  def descendants: Parser[Path] = nonRepeat ~ " " ~ nonRepeat ^^ { parts => Path(parts._1._1.xpath + "//" + parts._2.xpath) }
-  
-  def directDescendants: Parser[Path] = nonRepeat ~ " > " ~ nonRepeat ^^ { parts => Path(parts._1._1.xpath +"/" + parts._2.xpath)  }
-  
-  def selector: Parser[List[Selector]] = repsep(selectorPart, ",") ^^ { selectors => selectors.map{
-    case e: ElementSelector => Path("//" + e.xpath)
-    case eid: ElementById => Path("//" + eid.xpath)
-    case p: Path => Path("//" + p.xpath)
-  }}
-  
-  def getSelector(s: String): Node => List[Node] = {
-    import Ornament.nodeList2ListNode
+  implicit def nodeList2ListNode(nodeList: NodeList): List[Node] = for(i <- (0 until nodeList.getLength).toList) yield { nodeList.item(i) }
     
-    println("Selector: " + s)
-    //println(parseAll(selector, s))
-    val selectors = parseAll(selector, s).get
-    rootElement => (selectors.flatMap{ selector =>
-      println("XPath: " + selector.xpath)
-      val xpath = XPathFactory.newInstance().newXPath()
-      val expr = xpath.compile(selector.xpath)
-      
-      expr.evaluate(rootElement, XPathConstants.NODESET).asInstanceOf[NodeList]      
-    })
+  override def skipWhitespace = false
+  
+  private def searchForAttribute(n: Node, name: String, value: Option[String], negate: Boolean = false, depth: Option[Int]): List[Node] = if(n.getAttributes.getNamedItem(name).getNodeValue == value.get) n :: n.getChildNodes.flatMap(s => searchForAttribute(s, name, value, negate, depth)) else n.getChildNodes.flatMap(s => searchForAttribute(s, name, value, negate, depth)) 
+  private def searchForName(n: Node, element: String, depth: Option[Int]): List[Node] = { 
+    val matchingElement = n match {
+      case e: Element if e.getNodeName == element || element == "*" => Some(e)
+      case _ => None
+    }
+    val rest = depth match {
+      case Some(d: Int) => if(d > 0) n.getChildNodes.flatMap(searchForName(_: Node, element, Some(d - 1))) else Nil
+      case None => n.getChildNodes.flatMap(searchForName(_: Node, element, None))
+    }
+    matchingElement.map(_ :: rest).getOrElse(rest)
   }
+  private def flatten(n: Node): List[Node] = n :: n.getChildNodes.flatMap(flatten)
+  
+  def firstChild: Parser[List[Node] => Option[Node]] = ":first-child" ^^ ( ignore => nodes => nodes.filter(_.getNodeType == Node.ELEMENT_NODE).headOption )
+  def lastChild: Parser[List[Node] => Option[Node]] = ":last-child" ^^ ( ignore => nodes => nodes.filter(_.getNodeType == Node.ELEMENT_NODE).lastOption )
+  def limiter = firstChild | lastChild
+  
+  def id(depth: Option[Int] = None, ignoreSelf: Boolean = false): Parser[Node => List[Node]] = "#" ~> "[a-zA-Z]+".r ^^ ( id => searchForAttribute(_: Node, "id", Some(id), false, depth) )
+  def element(depth: Option[Int] = None, ignoreSelf: Boolean = false): Parser[Node => List[Node]] = ("*" | "[a-zA-Z]+".r) ~ opt(limiter) ^^ { stuff =>
+    val selector = searchForName(_: Node, stuff._1, depth)
+    println(stuff._2)
+    stuff._2.map { limiter =>
+      (node: Node) => {
+        var nodes = selector(node)
+        nodes = if(ignoreSelf) nodes.tail else nodes
+        limiter(nodes).map(y => List(y)).getOrElse(Nil)
+      }
+    }.getOrElse(selector)    
+  }
+  
+  def nonRepeatingParts(depth: Option[Int] = None, ignoreSelf: Boolean = false) = element(depth, ignoreSelf) | id(depth, ignoreSelf)
+  def selectorPart = directDescendants | nonRepeatingParts() 
+
+  def directDescendants: Parser[Node => List[Node]] = nonRepeatingParts(None) ~ " > " ~ nonRepeatingParts(Some(1), true) ^^ { parts => parts._1._1(_: Node).flatMap(n => parts._2(n)) }
+  
+  def selector = repsep(selectorPart, ",")
+  
+  def getSelector(s: String): Node => List[Node] = rootNode => parseAll(selector, s).get.flatMap(_(rootNode)) 
 }

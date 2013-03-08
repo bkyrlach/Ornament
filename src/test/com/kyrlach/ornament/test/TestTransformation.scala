@@ -2,12 +2,14 @@ package com.kyrlach.ornament.test
 
 import javax.xml.parsers.DocumentBuilderFactory
 import java.io.File
-import com.kyrlach.ornament.Ornament
+import com.kyrlach.ornament.Ornament._
 import org.w3c.dom.Node
 import org.w3c.dom.Element
+import com.kyrlach.ornament.CSSParser
+import com.kyrlach.ornament.Ornament
 
 object TestTransformation {
-  import Ornament._
+  import CSSParser.nodeList2ListNode
   
   def nodeString(n: Node): String = {
     n match {
@@ -23,22 +25,30 @@ object TestTransformation {
     val builder = factory.newDocumentBuilder()
     val doc = builder.parse(new File("template-test.html"))
     
-    val snippet2 = Snippet(doc, "tbody > *:first-child", nodes => (fruit: String, quantity: Int)  =>
-      At(nodes) (
+    println(CSSParser.getSelector("tbody")(doc))
+    println(CSSParser.getSelector("tbody > *:first-child")(doc))
+    
+    val snippet2 = Snippet(doc, "tbody > *:first-child", nf => {(fruit: String, quantity: Int)  =>
+      At(nf()) (
         List[(String, List[Node] => Unit)](
           ("tr > *:first-child", Content(fruit)),
           ("tr > *:last-child" , Content(quantity.toString))
         )
       )
-    )
+    })
     
     val fruitData = Map("a" -> 1, "b" -> 2, "c" -> 3)
 
-
+    def silly(d: Map[String, Int]): List[Node] => Unit = {
+      val mapping = fruitData.flatMap(fruit => snippet2(fruit._1, fruit._2)).toList
+      println(mapping.map(nodeString))
+      Content(mapping)
+    }
+    
     //content is defined for a Node, String, List<Node>
     val document = At(doc)(
       List[(String, List[Node] => Unit)](
-        ("tbody", Content(fruitData.flatMap(fruit => snippet2(fruit._1, fruit._2)).toList))
+        ("tbody", silly(fruitData))
       )
     )
     
