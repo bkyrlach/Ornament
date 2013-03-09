@@ -2,25 +2,34 @@ package com.kyrlach.ornament.test
 
 import java.io.File
 import java.io.FileInputStream
-import com.codecommit.antixml.XML
 import com.kyrlach.ornament.CSSParser
-import com.codecommit.antixml.Elem
-import com.codecommit.antixml.Text
+import javax.xml.parsers.DocumentBuilderFactory
+import com.kyrlach.ornament.XMLEnricher
+
+import com.kyrlach.ornament.Ornament._
 
 object TestTransformation {
   
   def main(args: Array[String]): Unit = {
-    val doc = XML.fromInputStream(new FileInputStream(new File("template-test.html")))
+    val factory = DocumentBuilderFactory.newInstance();
+    val builder = factory.newDocumentBuilder()
+    val doc = XMLEnricher(builder.parse(new File("template-test.html")))
     
-    val elems = CSSParser.getSelector("#heading1")(doc)
-    
-    val update = elems.head match {
-      case e: Elem => e.addChild(Text("abc"))
-    }
+    //println(doc)
 
-    val update2 = elems.updated(0, update)
-    println(update2)
-    //val doc2 = update2.unselect
+    val snippet2 = snippet(doc, "tbody > *:first-child", { nodes => (fruit: String, quantity: Int)  => {
+       at(nodes, 
+             ("*:first-child", content(fruit)),
+             ("*:last-child", content(quantity.toString))) 
+     }
+    })
+
+    val fruitData = Map("a" -> 1, "b" -> 2, "c" -> 3)
+
+    //content is defined for a Node, String, List<Node>
+    val document = at(doc, ("tbody", content(fruitData.flatMap(fruit => snippet2(fruit._1, fruit._2)).toList )))
+    println(document)
+    
     //(em/defsnippet snippet2 "templates/template1.html" ["tbody > *:first-child"] 
 //               [fruit quantity] 
 //               ["tr > *:first-child"] (em/content fruit)
