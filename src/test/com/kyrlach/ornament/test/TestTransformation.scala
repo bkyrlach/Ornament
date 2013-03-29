@@ -19,8 +19,8 @@ object TestTransformation {
 
     val snippet2 = snippet(doc, "tbody > *:first-child", { nodes => (fruit: String, quantity: Int)  => {
        at(nodes, 
-             ("*:first-child", content(fruit)),
-             ("*:last-child", content(quantity.toString))) 
+             ("*:nth-child(1)", content(fruit)),
+             ("*:nth-child(2)", content(quantity.toString))) 
      }
     })
 

@@ -7,6 +7,7 @@ import org.w3c.dom.Node
 import org.w3c.dom.Text
 import org.w3c.dom.NodeList
 import org.w3c.dom.NamedNodeMap
+import org.w3c.dom.Comment
 
 object XMLEnricher {
   implicit def nodeList2ListNode(nl: NodeList): List[Node] = for(i <- (0 until nl.getLength).toList) yield { nl.item(i) }
@@ -19,6 +20,7 @@ object XMLEnricher {
     case d: Document => new XMLDocument(None, None, Nil, UUID.randomUUID)
     case e: Element => new XMLElement(None, None, e.getNodeName, e.getAttributes, Nil, UUID.randomUUID).appendChildren(e.getChildNodes.map(wrapNode))
     case t: Text => new TextNode(None, None, t.getNodeValue, UUID.randomUUID)
+    case c: Comment => new CommentNode(None, None, Nil, UUID.randomUUID).appendChildren(c.getChildNodes.map(wrapNode))
   }
 }
 
@@ -29,6 +31,7 @@ abstract class XMLNode private[ornament](val ownerDocument: Option[XMLDocument],
     case d: XMLDocument => d.cloneNode(ownerDocument = ownerDocument, parentNode = parentNode, children = children, uuid = uuid)
     case t: TextNode => t.cloneNode(ownerDocument = ownerDocument, parentNode = parentNode,uuid = uuid)
     case e: XMLElement => e.cloneNode(ownerDocument = ownerDocument, parentNode = parentNode, children = children, uuid = uuid)
+    case c: CommentNode => c.cloneNode(ownerDocument = ownerDocument, parentNode = parentNode, children = children, uuid = uuid)
   }
   
   private[ornament] def appendChild(c: XMLNode): XMLNode = copy(children = this.children :+ (c.copy(parentNode = Some(this), ownerDocument = (if(this.isInstanceOf[XMLDocument]) Some(this.asInstanceOf[XMLDocument]) else ownerDocument))))  
@@ -40,14 +43,19 @@ abstract class XMLNode private[ornament](val ownerDocument: Option[XMLDocument],
   private[ornament] def replaceNode(n: XMLNode): XMLNode = if(uuid == n.uuid) n else this.copy(children = children.map(_.replaceNode(n)))
 }
 
+class CommentNode private[ornament](override val ownerDocument: Option[XMLDocument], override val parentNode: Option[XMLNode], override val children: List[XMLNode] = Nil, uuid: UUID) extends XMLNode(ownerDocument, parentNode, children, uuid) {
+  override def toString(): String = ""
+  private[ornament] def cloneNode(ownerDocument: Option[XMLDocument] = this.ownerDocument, parentNode: Option[XMLNode] = this.parentNode, children: List[XMLNode] = this.children, uuid: UUID = uuid): CommentNode = new CommentNode(ownerDocument, parentNode, children, uuid)
+}
+
 class TextNode private[ornament](override val ownerDocument: Option[XMLDocument], override val parentNode: Option[XMLNode], val text: String, uuid: UUID) extends XMLNode(ownerDocument, parentNode, Nil, uuid) {
   override def toString(): String = text
   private[ornament] def cloneNode(ownerDocument: Option[XMLDocument] = this.ownerDocument, parentNode: Option[XMLNode] = this.parentNode, text: String = text, uuid: UUID = uuid): TextNode = new TextNode(ownerDocument, parentNode, text, uuid) 
 }
 
 class XMLDocument private[ornament](override val ownerDocument: Option[XMLDocument] = None, override val parentNode: Option[XMLNode] = None, override val children: List[XMLNode] = Nil, uuid: UUID) extends XMLNode(ownerDocument, parentNode, children, uuid) {
-  override def toString(): String = "#document: \n" + children.foldLeft("")(_ + _.toString)
-  private[ornament] def cloneNode(ownerDocument: Option[XMLDocument] = this.ownerDocument, parentNode: Option[XMLNode] = this.parentNode, children: List[XMLNode] = children, uuid: UUID = uuid): XMLDocument = new XMLDocument(ownerDocument, parentNode, children, uuid)
+  override def toString(): String = children.foldLeft("")(_ + _.toString)
+  private[ornament] def cloneNode(ownerDocument: Option[XMLDocument] = this.ownerDocument, parentNode: Option[XMLNode] = this.parentNode, children: List[XMLNode] = this.children, uuid: UUID = this.uuid): XMLDocument = new XMLDocument(ownerDocument, parentNode, children, uuid)
 }
 
 class XMLElement private[ornament](override val ownerDocument: Option[XMLDocument], override val parentNode: Option[XMLNode], val name: String, val attributes: Map[String, String] = Map(), override val children: List[XMLNode] = Nil, uuid: UUID) extends XMLNode(ownerDocument, parentNode, children, uuid) { 
