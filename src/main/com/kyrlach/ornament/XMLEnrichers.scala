@@ -35,7 +35,10 @@ abstract class XMLNode private[ornament](val ownerDocument: Option[XMLDocument],
   }
   
   private[ornament] def appendChild(c: XMLNode): XMLNode = copy(children = this.children :+ (c.copy(parentNode = Some(this), ownerDocument = (if(this.isInstanceOf[XMLDocument]) Some(this.asInstanceOf[XMLDocument]) else ownerDocument))))  
-  private[ornament] def appendChildren(children: List[XMLNode]): XMLNode = copy(children = this.children ::: children.map(_.copy()))
+  private[ornament] def appendChildren(children: List[XMLNode]): XMLNode = {
+    val p = copy(children = this.children ::: children.map(_.copy()))
+    p.copy(children = children.map(_.copy(parentNode = Some(p))))
+  }
 
   private[ornament] def replaceChildren(c: XMLNode): XMLNode = copy(children = Nil).appendChild(c)
   private[ornament] def replaceChildren(children: List[XMLNode]): XMLNode = copy(children = Nil).appendChildren(children)

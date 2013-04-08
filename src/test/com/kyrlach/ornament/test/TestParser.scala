@@ -5,11 +5,22 @@ import javax.xml.xpath.XPathFactory
 import java.io.File
 import javax.xml.xpath.XPathConstants
 import org.w3c.dom.NodeList
+import com.kyrlach.ornament.CSSParser
+import com.kyrlach.ornament.XMLEnricher
+import com.kyrlach.ornament.XMLDocument
+import com.kyrlach.ornament.XMLElement
 
 object TestParser {
   
   def main(args: Array[String]): Unit = {
-    
+    val factory = DocumentBuilderFactory.newInstance();
+    val builder = factory.newDocumentBuilder()
+    val doc = XMLEnricher(builder.parse(new File("test2.html")))
+    val getTR = CSSParser.getSelector("#results > tbody > *:first-child")
+    val getTD = CSSParser.getSelector("td.map")
+    val a = getTR(doc)
+    val b = a.flatMap(getTD)
+    println(b)
   }
 //(defn test-from []
 //  (let [form-vals (em/from js/document
